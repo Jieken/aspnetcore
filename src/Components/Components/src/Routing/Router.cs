@@ -54,6 +54,8 @@ namespace Microsoft.AspNetCore.Components.Routing
         /// </summary>
         [Parameter] public RenderFragment<RouteData> Found { get; set; }
 
+        [Parameter] public Func<string, List<string>> OnNavigate { get; set; }
+
         private RouteTable Routes { get; set; }
 
         /// <inheritdoc />
@@ -67,7 +69,7 @@ namespace Microsoft.AspNetCore.Components.Routing
         }
 
         /// <inheritdoc />
-        public Task SetParametersAsync(ParameterView parameters)
+        public async Task SetParametersAsync(ParameterView parameters)
         {
             parameters.SetParameterProperties(this);
 
@@ -91,11 +93,16 @@ namespace Microsoft.AspNetCore.Components.Routing
                 throw new InvalidOperationException($"The {nameof(Router)} component requires a value for the parameter {nameof(NotFound)}.");
             }
 
+            if (OnNavigate != null) {
+                NavigationManager.OnNavigate = OnNavigate;
+            }
+
+           await NavigationManager.BeforeLocationChangeAsync();
+
 
             var assemblies = AdditionalAssemblies == null ? new[] { AppAssembly } : new[] { AppAssembly }.Concat(AdditionalAssemblies);
             Routes = RouteTableFactory.Create(assemblies);
             Refresh(isNavigationIntercepted: false);
-            return Task.CompletedTask;
         }
 
         /// <inheritdoc />

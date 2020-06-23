@@ -522,6 +522,33 @@ namespace Microsoft.AspNetCore.Components.E2ETest.Tests
             }
         }
 
+        [Fact]
+        public void CanLazyLoadOnRouteChange()
+        {
+            SetUrlViaPushState("/WithDynamicAssembly");
+            var app = Browser.MountTestComponent<TestRouter>();
+            var button = app.FindElement(By.Id("use-package-button"));
+
+            button.Click();
+
+            AssertLogDoesNotContainCriticalMessages("Could not load file or assembly 'Newtonsoft.Json");
+        }
+
+        [Fact]
+        public void CanLazyLoadOnFirstVisit()
+        {
+            SetUrlViaPushState("/WithDynamicAssembly");
+            var app = Browser.MountTestComponent<TestRouter>();
+
+            Browser.Navigate().Refresh();
+
+            var button = app.FindElement(By.Id("use-package-button"));
+
+            button.Click();
+
+            AssertLogDoesNotContainCriticalMessages("Could not load file or assembly 'Newtonsoft.Json");
+        }
+
         private long BrowserScrollY
         {
             get => (long)((IJavaScriptExecutor)Browser).ExecuteScript("return window.scrollY");
@@ -543,6 +570,19 @@ namespace Microsoft.AspNetCore.Components.E2ETest.Tests
             Browser.Equal(linkTexts, () => Browser
                 .FindElements(By.CssSelector("a.active"))
                 .Select(x => x.Text));
+        }
+
+        private void AssertLogDoesNotContainCriticalMessages(params string[] messages)
+        {
+            var log = Browser.Manage().Logs.GetLog(LogType.Browser);
+            foreach (var message in messages)
+            {
+                Assert.Contains(log, entry =>
+                {
+                    return entry.Level == LogLevel.Severe
+                    && !entry.Message.Contains(message);
+                });
+            }
         }
     }
 }
